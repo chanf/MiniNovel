@@ -111,7 +111,7 @@ def start(port, data_dir):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("action", choices=["run", "start", "stop", "restart", "status", "logs"])
-    parser.add_argument("--port", type=int, default=5173)
+    parser.add_argument("--port", type=int, default=9513)
     parser.add_argument("--data-dir", default=str(ROOT / ".data"))
     args = parser.parse_args()
     if not 1 <= args.port <= 65535:

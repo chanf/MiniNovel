@@ -19,7 +19,7 @@ def provider(capability="text", models=None):
 
 def test_initialization_is_idempotent(workspace):
     client, _, directory = workspace
-    assert client.get("/api/health").json()["schemaVersion"] == 2
+    assert client.get("/api/health").json()["schemaVersion"] == 3
     assert len(client.get("/api/projects").json()) == 1
     assert client.get("/api/projects").json()[0]["is_demo"] == 1
     with TestClient(create_app(directory)) as restarted:
@@ -93,11 +93,13 @@ def test_v1_migration_preserves_configuration_and_backups_include_keys(workspace
     client, app, directory = workspace
     defaults = client.get("/api/settings").json()["defaults"]
     with app.state.database.connect() as connection:
-        connection.execute("DROP TABLE provider_secrets")
+        # Rebuild a true v1 layout: content tables did not exist before M2.
+        for table in ("shots", "paragraphs", "scenes", "characters", "episodes", "provider_secrets"):
+            connection.execute(f"DROP TABLE IF EXISTS {table}")
         connection.execute("PRAGMA user_version = 1")
     migrated = create_app(directory)
     with TestClient(migrated) as restarted:
-        assert restarted.get("/api/health").json()["schemaVersion"] == 2
+        assert restarted.get("/api/health").json()["schemaVersion"] == 3
         assert restarted.get("/api/settings").json()["defaults"] == defaults
         restarted.put("/api/providers/agnes-text", json={"capability": "text", "name": "Agnes AI", "url": "https://apihub.agnes-ai.com/v1", "models": ["agnes-2.5-flash"], "apiKey": "backup-test-secret"})
     restored_dir = tmp_path / "restored"

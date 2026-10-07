@@ -4,17 +4,17 @@ MiniNovel 是一个以分幕剧本为核心的 AI 有声小说视频创作工作
 
 产品采用 Web 前端，可在本机直接部署，也可通过 Docker 部署。文本、图片和视频各自支持多个供应商及模型，每类独立选择一个默认模型，初始配置为 Agnes AI。本地配音计划采用 Qwen3-TTS + MLX-Audio，在 Apple Silicon Mac 上运行。
 
-**当前进度：M1 已完成，M2–M8 尚未开始。** 当前可以运行本地服务、管理项目 API，并在设置页保存供应商、模型和 API Key。角色、剧本、配音与视频工作台已有交互原型，实际生成与完整创作数据持久化尚未接入。
+**当前进度：M1、M2 已完成，M3–M8 尚未开始。** 当前可以运行本地服务、管理项目 API、保存模型配置，并且角色设定与剧本工作台已接入真实持久化：角色资料、分幕剧本、对白段落、镜头提示词的修改会自动保存到 SQLite，刷新和服务重启后保留。配音与视频工作台仍是交互原型。
 
 ## 产品能力与开发状态
 
 | 能力 | 产品目标 | 当前状态 |
 | --- | --- | --- |
-| 项目管理 | 多项目独立保存、编辑、复制、归档与恢复 | 创建、查询、修改、归档及恢复 API 已实现；项目 UI 尚未连接这些 API |
+| 项目管理 | 多项目独立保存、编辑、复制、归档与恢复 | 创建、查询、修改、归档及恢复 API 已实现；项目列表 UI 已接入，项目复制在 M3 |
 | 模型配置 | 文本、图片、视频各配置多个供应商和模型，独立指定默认项 | 后端与设置页已实现持久化；实际连接测试尚未实现 |
-| 角色设定 | AI 拟定姓名、昵称、介绍和头像提示词，用户确认后生成头像 | 示例页面可编辑，刷新恢复初始数据；AI 生成尚未实现 |
-| 分幕剧本 | 每幕包含对白、旁白和多个镜头，支持独立编辑 | 示例交互已提供；正式保存与 AI 创作尚未实现 |
-| Skill | 复用小说写作、去 AI 味、审稿及插画方法 | 候选配置界面；导入与执行尚未实现 |
+| 角色设定 | AI 拟定姓名、昵称、介绍和头像提示词，用户确认后生成头像 | 资料编辑、确认与头像提示词已持久化；AI 生成在 M4，头像生成在 M5 |
+| 分幕剧本 | 每幕包含对白、旁白和多个镜头，支持独立编辑 | 幕、段落、镜头已持久化，编辑自动保存；AI 创作在 M4 |
+| Skill | 复用小说写作、去 AI 味、审稿及插画方法 | 候选配置界面；导入与执行在 M3 |
 | 图片与动态镜头 | 单图重生成、候选采用、头像统一引用及短视频镜头 | 本地 SVG 示例；真实图片和视频生成尚未实现 |
 | 角色配音 | 先选音色，再逐段生成 WAV 与 MP3，支持局部重做 | 音色选择原型；TTS 尚未接入 |
 | 字幕与成片 | 用实际音频时长建立时间轴，预览并导出 MP4、SRT 与素材包 | 界面示意；真实对齐、预览与渲染尚未实现 |
@@ -53,7 +53,7 @@ flowchart TD
 
 ## 部署
 
-默认访问地址为 `http://127.0.0.1:5173`。统一入口是 [scripts/deploy.sh](scripts/deploy.sh)，脚本自动定位项目目录。下列命令假设在项目根目录执行；完整参数、备份和排错说明见 [本地部署文档](docs/本地部署.md)。
+默认访问地址为 `http://127.0.0.1:9513`。统一入口是 [scripts/deploy.sh](scripts/deploy.sh)，脚本自动定位项目目录。下列命令假设在项目根目录执行；完整参数、备份和排错说明见 [本地部署文档](docs/本地部署.md)。
 
 ### 快捷服务脚本
 
@@ -177,7 +177,7 @@ Docker 部署 Web 应用不等于能够在 Linux 容器内运行 MLX。后续 Ma
 
 | 参数 | 默认值 | 作用 |
 | --- | --- | --- |
-| `MININOVEL_PORT` | `5173` | 部署脚本使用的宿主访问端口 |
+| `MININOVEL_PORT` | `9513` | 部署脚本使用的宿主访问端口 |
 | `MININOVEL_DATA_DIR` | 本机项目下 `.data/` | 本机部署的数据目录，建议使用绝对路径；当前 Compose 固定使用容器 `/data` |
 | `MININOVEL_COMPOSE_PROJECT` | `mininovel` | Docker Compose 项目名，决定容器与数据卷的命名空间 |
 | `MININOVEL_HOST` | 手动运行时为 `127.0.0.1` | `run.py` 的监听地址；本机部署脚本固定回环地址，容器内使用 `0.0.0.0` |
@@ -217,7 +217,7 @@ MININOVEL_PORT=5180 ./scripts/deploy.sh docker start
 ```text
 MiniNovel/
 ├── .data/
-│   ├── mininovel.sqlite3           # 项目、供应商、模型、默认项、API Key
+│   ├── mininovel.sqlite3           # 项目、剧集、角色、剧本、供应商、模型、默认项、API Key
 │   └── projects/
 │       ├── demo-story/             # 演示项目素材目录
 │       └── <project_id>/           # 创建项目时建立的独立素材目录
@@ -232,34 +232,35 @@ MiniNovel/
 
 Docker 中 `/data/mininovel.sqlite3` 和 `/data/projects/` 对应相同结构，由命名卷持久化；日志通过 Docker 读取。
 
-`assets/` 中的示例图属于应用资源。它们不是 AI 生成结果，也不是某个真实项目的用户素材。M1 仅建立项目素材目录和受限读取接口，尚未实现素材上传或生成写入。
+`assets/` 中的示例图属于应用资源。它们不是 AI 生成结果，也不是某个真实项目的用户素材。M2 已建立完整的创作数据表；素材上传与生成文件写入从 M5 开始。
 
 ### 当前哪些内容会保存
 
 | 内容 | 当前存储方式 | 刷新 / 重启后的行为 |
 | --- | --- | --- |
-| 通过 API 创建的项目名称、梗概、归档状态 | SQLite `projects` | 保留；项目列表 UI 尚未连接 API |
-| 供应商名称、地址、能力分类 | SQLite `providers` | 保留 |
-| 每个供应商的模型列表 | SQLite `provider_models` | 保留 |
-| 文本、图片、视频默认模型 | SQLite `defaults` | 保留 |
-| 供应商 API Key | SQLite `provider_secrets` | 保留，不回显明文 |
-| 示例角色、头像提示词、剧本、镜头与音色选择 | 前端页面内存，初始内容来自 `app.js` | 刷新后恢复示例 |
-| 示例肖像与场景画面 | 本地 SVG 文件或前端绘制 | 随代码保留，不代表生成记录 |
-| TTS 模型和本地服务地址的表单选择 | 前端界面 | 尚未持久化 |
-| AI 任务、真实图片、语音、字幕与成片 | 尚未实现 | 当前不会生成或保存 |
+| 项目名称、梗概、归档状态 | SQLite `projects` | 保留 |
+| 剧集信息 | SQLite `episodes` | 保留；每项目默认一集 |
+| 角色姓名、昵称、身份、介绍、头像提示词、采用头像、音色、确认状态 | SQLite `characters` | 保留 |
+| 幕标题、地点、场景说明、顺序、确认状态 | SQLite `scenes` | 保留 |
+| 段落说话人、对白/旁白类型、正文、情绪、顺序 | SQLite `paragraphs` | 保留；修改正文自动把所在幕置回待编辑 |
+| 镜头提示词、采用图片引用、顺序 | SQLite `shots` | 保留 |
+| 供应商、模型列表、默认模型、API Key | SQLite 对应表 | 保留；密钥不回显 |
+| 配音页的音色选择 | SQLite `characters.voice` | 保留；实际 TTS 在 M6 |
+| 镜头图片画面（示例 SVG / 前端绘制） | 应用资源或前端绘制 | 随代码保留，不是生成记录 |
+| AI 任务、真实图片、语音、字幕与成片 | 尚未实现 | M3 起逐步接入 |
 
-因此，当前数据库可以恢复模型配置和项目元信息，**尚不能恢复用户在原型页面编辑的小说创作内容**。完整创作过程保存从 M2 开始实现。
+页面内编辑通过防抖自动保存；保存失败会以提示条显示错误。因此当前数据库可以完整恢复项目、角色与剧本的创作内容。
 
-## 数据字典：当前 SQLite v2
+## 数据字典：当前 SQLite v3
 
-数据库定义见 [server/database.py](server/database.py)。当前实际包含以下 5 张表；表中字段名是数据库字段名。
+数据库定义见 [server/database.py](server/database.py)。当前包含 10 张表；表中字段名是数据库字段名。
 
 通用约定：
 
 - `TEXT` 为文本，`INTEGER` 为整数；布尔状态以 `0` / `1` 保存。
 - 时间由服务端生成，为带时区的 UTC ISO 8601 字符串。
-- 新项目和供应商 ID 使用 UUID 的 32 位十六进制字符串；内置演示记录有固定 ID。
-- 数据库版本记录在 `PRAGMA user_version`，当前为 `2`。启动时支持 v1 → v2 迁移；遇到更高版本拒绝启动，避免旧代码误用新结构。
+- 新项目、角色、幕、段落和镜头 ID 使用 UUID 的 32 位十六进制字符串；演示项目使用固定 ID。
+- 数据库版本记录在 `PRAGMA user_version`，当前为 `3`。启动时支持 v1 → v2 → v3 自动迁移；遇到更高版本拒绝启动，避免旧代码误用新结构。
 
 ### `projects`：项目元信息
 
@@ -327,6 +328,76 @@ API 中对应 `{provider, model}`。默认项是“能力 + 供应商 + 模型�
 写入 API 字段名为 `apiKey`。新供应商可以不设置密钥；编辑时省略、留空或只填空白不会删除原密钥，填写新值会替换。配置和凭据在同一事务中提交。
 
 配置读取接口只返回 `hasKey`，不返回 `api_key`。目前没有读取明文密钥或清除密钥的公开 API，也没有对应删除界面。
+
+### `episodes`：剧集
+
+| 字段 | 类型与约束 | 说明 |
+| --- | --- | --- |
+| `id` | TEXT，主键 | 剧集 ID；创建项目时自动建立默认剧集 |
+| `project_id` | TEXT，非空，外键 | 指向 `projects.id`；项目删除时级联删除 |
+| `title` | TEXT，非空，默认 `第 01 集` | 剧集标题 |
+| `position` | INTEGER，非空，默认 `0` | 同项目内排序 |
+| `created_at` / `updated_at` | TEXT，非空 | 创建 / 修改时间 |
+
+当前每个项目自动使用第一个剧集；多剧集管理界面在后续里程碑评估。
+
+### `characters`：角色与说话人
+
+| 字段 | 类型与约束 | 说明 |
+| --- | --- | --- |
+| `id` | TEXT，主键 | 角色 ID；旁白也是一条记录 |
+| `project_id` | TEXT，非空，外键 | 指向 `projects.id` |
+| `name` | TEXT，非空 | 姓名；API 限制 1–120 字符 |
+| `nickname` | TEXT，非空，默认空字符串 | 昵称 / 别名 |
+| `role` | TEXT，非空，默认 `配角` | 故事身份：主角 / 重要配角 / 关键角色 / 配角 / 旁白 |
+| `bio` | TEXT，非空，默认空字符串 | 角色介绍，API 最长 20,000 字符 |
+| `avatar_prompt` | TEXT，非空，默认空字符串 | 头像生成提示词；API 字段名 `avatarPrompt` |
+| `avatar_url` | TEXT，非空，默认空字符串 | 当前采用头像的引用；API 字段名 `avatarUrl` |
+| `is_narrator` | INTEGER，非空，默认 `0` | 是否为旁白说话人；旁白不可删除 |
+| `color` | TEXT，非空，默认 `slate` | 界面配色标识 |
+| `voice` | TEXT，非空，默认空字符串 | 已选择的 TTS 音色 ID（M6 生成时使用） |
+| `position` | INTEGER，非空，默认 `0` | 列表排序 |
+| `confirmed` | INTEGER，非空，默认 `0` | 资料确认状态；修改姓名、昵称、身份、介绍或提示词自动清零 |
+| `created_at` / `updated_at` | TEXT，非空 | 创建 / 修改时间 |
+
+角色被段落引用时删除返回 409；需先调整这些段落的说话人。
+
+### `scenes`：幕
+
+| 字段 | 类型与约束 | 说明 |
+| --- | --- | --- |
+| `id` | TEXT，主键 | 幕 ID |
+| `episode_id` | TEXT，非空，外键 | 指向 `episodes.id`；剧集删除时级联删除 |
+| `title` | TEXT，非空，默认 `新的一幕` | 幕标题 |
+| `place` | TEXT，非空，默认空字符串 | 场景地点 |
+| `summary` | TEXT，非空，默认空字符串 | 场景说明，不参与配音与字幕 |
+| `status` | TEXT，非空，枚举 `draft` / `done` | 内容确认状态；段落正文、说话人或类型变化自动回到 `draft` |
+| `position` | INTEGER，非空，默认 `0` | 幕排序 |
+| `created_at` / `updated_at` | TEXT，非空 | 创建 / 修改时间 |
+
+### `paragraphs`：对白与旁白段落
+
+| 字段 | 类型与约束 | 说明 |
+| --- | --- | --- |
+| `id` | TEXT，主键 | 段落 ID |
+| `scene_id` | TEXT，非空，外键 | 指向 `scenes.id`；幕删除时级联删除 |
+| `character_id` | TEXT，非空，外键 | 说话人；必须与所属幕同项目，接口校验 |
+| `kind` | TEXT，非空，枚举 `dialogue` / `narration` | 对白 / 旁白 |
+| `text` | TEXT，非空，默认空字符串 | 正文；API 最长 20,000 字符 |
+| `emotion` | TEXT，非空，默认空字符串 | 演绎情绪备注（M6 传给 TTS） |
+| `position` | INTEGER，非空，默认 `0` | 幕内排序 |
+| `created_at` / `updated_at` | TEXT，非空 | 创建 / 修改时间 |
+
+### `shots`：镜头
+
+| 字段 | 类型与约束 | 说明 |
+| --- | --- | --- |
+| `id` | TEXT，主键 | 镜头 ID |
+| `scene_id` | TEXT，非空，外键 | 指向 `scenes.id`；幕删除时级联删除 |
+| `prompt` | TEXT，非空，默认空字符串 | 画面提示词，API 最长 8,000 字符 |
+| `image_url` | TEXT，非空，默认空字符串 | 当前采用图片引用；M5 生成后写入 |
+| `position` | INTEGER，非空，默认 `0` | 幕内排序 |
+| `created_at` / `updated_at` | TEXT，非空 | 创建 / 修改时间 |
 
 ## 小说过程与结果的存储规划
 
@@ -405,11 +476,26 @@ API 使用 JSON，同源 Web 前端通过 `/api` 调用。公开交互文档页�
 
 | 方法 | 路径 | 用途 |
 | --- | --- | --- |
-| GET | `/api/health` | 服务状态、当前里程碑、数据库版本和生成开关 |
+| GET | `/api/health` | 服务状态、当前里程碑、生成开关 |
 | GET | `/api/projects` | 项目列表，支持 `include_archived` |
-| POST | `/api/projects` | 创建独立项目和素材目录 |
+| POST | `/api/projects` | 创建独立项目、默认剧集与旁白说话人 |
 | GET | `/api/projects/{project_id}` | 查询项目元信息 |
 | PATCH | `/api/projects/{project_id}` | 修改名称、梗概或归档状态；`archived=false` 恢复 |
+| GET | `/api/projects/{project_id}/content` | 项目内容包：剧集、角色、幕（含段落与镜头） |
+| POST | `/api/projects/{project_id}/characters` | 新增角色 |
+| PATCH | `/api/characters/{character_id}` | 更新角色资料；内容字段变化会清除确认状态 |
+| DELETE | `/api/characters/{character_id}` | 删除角色；被段落引用或为旁白时返回 409 |
+| POST | `/api/projects/{project_id}/scenes` | 新增一幕 |
+| PATCH | `/api/scenes/{scene_id}` | 更新幕标题、地点、说明或确认状态 |
+| DELETE | `/api/scenes/{scene_id}` | 删除幕及其段落与镜头 |
+| POST | `/api/projects/{project_id}/scenes/reorder` | 幕排序，请求体需包含全部幕 ID |
+| POST | `/api/scenes/{scene_id}/paragraphs` | 新增对白或旁白段落 |
+| PATCH | `/api/paragraphs/{paragraph_id}` | 更新段落；正文、说话人或类型变化会把所在幕置回待编辑 |
+| DELETE | `/api/paragraphs/{paragraph_id}` | 删除段落 |
+| POST | `/api/scenes/{scene_id}/paragraphs/reorder` | 段落排序 |
+| POST | `/api/scenes/{scene_id}/shots` | 新增镜头 |
+| PATCH | `/api/shots/{shot_id}` | 更新镜头提示词或采用图片 |
+| DELETE | `/api/shots/{shot_id}` | 删除镜头 |
 | GET | `/api/settings` | 供应商、模型、默认项和 `hasKey` 状态 |
 | POST | `/api/providers` | 新增对应能力的供应商及模型列表，可同时设置 API Key |
 | PUT | `/api/providers/{provider_id}` | 更新供应商配置；能力分类不能变更 |
@@ -442,9 +528,9 @@ uv run pytest -q
 
 桌面预览配置在 `.claude/launch.json`，可选择 `MiniNovel` 或 `MiniNovel local deployment`。本机部署脚本只安装运行依赖，重新执行 `uv sync` 或 `uv run pytest -q` 可恢复开发依赖。
 
-当前验证记录：12 项 Python 测试通过，覆盖项目隔离与归档、配置与密钥持久化、v1 → v2 迁移、备份恢复、路径限制及部署进程识别。测试使用临时数据库和虚构密钥，不调用真实模型。测试依赖有一条关于 httpx TestClient 的弃用提示。
+当前验证记录：20 项 Python 测试通过，覆盖项目隔离与归档、内容播种、角色/幕/段落/镜头生命周期、确认状态回退、跨项目说话人校验、配置与密钥持久化、v1→v2→v3 迁移、路径限制及部署进程识别。测试使用临时数据库和虚构密钥，不调用真实模型。测试依赖有一条关于 httpx TestClient 的弃用提示。
 
-本机前台部署、健康检查和浏览器配置保存已实测；`start.sh`、`restart.sh`、`stop.sh` 的后台完整启停也已实际验证。Docker Compose 配置校验通过，但开发机 Docker 引擎未运行，镜像构建和容器实际运行尚未验证。
+本机前台部署、后台 `start/restart/stop` 生命周期、健康检查已实测。浏览器实测：演示项目加载、对白编辑跨刷新保留、确认状态回退、空白新项目隔离、角色创建与资料自动保存、音色持久化、项目归档与切换。Docker Compose 配置校验通过，但开发机 Docker 引擎未运行，镜像构建和容器实际运行尚未验证。
 
 ## 项目结构与相关文档
 

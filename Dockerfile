@@ -8,7 +8,7 @@ ENV PYTHONUNBUFFERED=1 \
     UV_PYTHON_DOWNLOADS=never \
     MININOVEL_DATA_DIR=/data \
     MININOVEL_HOST=0.0.0.0 \
-    MININOVEL_PORT=5173
+    MININOVEL_PORT=9513
 WORKDIR /app
 COPY pyproject.toml uv.lock .python-version ./
 RUN uv sync --frozen --no-dev --no-editable \
@@ -20,7 +20,7 @@ COPY server/ ./server/
 COPY assets/ ./assets/
 COPY run.py index.html app.js styles.css ./
 USER 10001:10001
-EXPOSE 5173
+EXPOSE 9513
 HEALTHCHECK --interval=10s --timeout=3s --start-period=15s --retries=3 \
-    CMD ["/app/.venv/bin/python", "-c", "import json,urllib.request; r=urllib.request.urlopen('http://127.0.0.1:5173/api/health',timeout=2); assert json.load(r)['status']=='ok'"]
+    CMD ["/app/.venv/bin/python", "-c", "import json,urllib.request; r=urllib.request.urlopen('http://127.0.0.1:9513/api/health',timeout=2); assert json.load(r)['status']=='ok'"]
 CMD ["/app/.venv/bin/python", "/app/run.py"]

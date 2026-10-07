@@ -9,7 +9,7 @@ from server.app import create_app
 def parse_args():
     parser = argparse.ArgumentParser(description="MiniNovel local web service")
     parser.add_argument("--host", default=os.environ.get("MININOVEL_HOST", "127.0.0.1"))
-    parser.add_argument("--port", type=int, default=os.environ.get("MININOVEL_PORT", "5173"))
+    parser.add_argument("--port", type=int, default=os.environ.get("MININOVEL_PORT", "9513"))
     # The deployment script uses this marker to identify only its own process.
     parser.add_argument("--deployment-id", default=None, help=argparse.SUPPRESS)
     args = parser.parse_args()

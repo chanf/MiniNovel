@@ -70,10 +70,11 @@ def test_scene_and_paragraph_workflow_resets_confirmation(client):
 
 def test_paragraph_rejects_cross_project_speaker(client):
     project = client.post("/api/projects", json={"name": "另一个故事"}).json()
-    response = client.post(f"/api/scenes/scene-1/paragraphs", json={"characterId": "lin", "text": "越权"})
+    scene = client.post(f"/api/projects/{project['id']}/scenes", json={"title": "别人的场景"}).json()
+    response = client.post(f"/api/scenes/{scene['id']}/paragraphs", json={"characterId": "lin", "text": "越权"})
     assert response.status_code == 422
     blank = client.get(f"/api/projects/{project['id']}/content").json()
-    assert blank["scenes"] == []
+    assert len(blank["scenes"]) == 1 and blank["scenes"][0]["paragraphs"] == []
 
 
 def test_scene_create_update_reorder_and_delete(client):
@@ -113,6 +114,6 @@ def test_migrations_preserve_existing_v2_database(tmp_path):
         connection.execute("DROP TABLE episodes")
         connection.execute("PRAGMA user_version = 2")
     with TestClient(create_app(directory)) as client:
-        assert client.get("/api/health").json()["schemaVersion"] == 2
+        assert client.get("/api/health").json()["schemaVersion"] == 3
         data = client.get("/api/projects/demo-story/content").json()
         assert len(data["scenes"]) == 6

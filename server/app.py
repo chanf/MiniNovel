@@ -159,7 +159,8 @@ def create_app(data_dir=None):
                 return JSONResponse({"detail": "只允许同源应用写入数据"}, status_code=403)
             if request.headers.get("sec-fetch-site") == "cross-site":
                 return JSONResponse({"detail": "拒绝跨站请求"}, status_code=403)
-            if not request.headers.get("content-type", "").startswith("application/json"):
+            # DELETE carries no body; POST/PUT/PATCH must be JSON from our own app.
+            if request.method != "DELETE" and not request.headers.get("content-type", "").startswith("application/json"):
                 return JSONResponse({"detail": "写入请求必须使用 JSON"}, status_code=415)
         response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
@@ -176,7 +177,7 @@ def create_app(data_dir=None):
 
     @app.get("/api/health")
     def health():
-        return {"status": "ok", "milestone": "M1", "schemaVersion": 2, "generationEnabled": False}
+        return {"status": "ok", "milestone": "M2", "schemaVersion": 3, "generationEnabled": False}
 
     @app.get("/api/projects")
     def list_projects(include_archived: bool = False):
@@ -324,7 +325,7 @@ def create_app(data_dir=None):
 
     @app.get("/api/projects/{project_id}/content")
     def project_content(project_id: str):
-        get_project(project_id)
+        row = get_project(project_id)
         with database.connect() as connection:
             episode = get_episode(connection, project_id)
             characters = [content_row_character(row) for row in connection.execute(
@@ -349,7 +350,7 @@ def create_app(data_dir=None):
                         "id": s["id"], "prompt": s["prompt"], "imageUrl": s["image_url"], "position": s["position"],
                     } for s in shots],
                 })
-        return {"episode": {"id": episode["id"], "title": episode["title"]}, "characters": characters, "scenes": scenes}
+        return {"episode": {"id": episode["id"], "title": episode["title"]}, "projectName": row["name"], "synopsis": row["synopsis"], "isDemo": bool(row["is_demo"]), "characters": characters, "scenes": scenes}
 
     @app.post("/api/projects/{project_id}/characters", status_code=201)
     def create_character(project_id: str, data: CharacterCreate):

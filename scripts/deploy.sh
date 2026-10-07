@@ -4,7 +4,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PYTHON="$ROOT/.venv/bin/python"
-PORT="${MININOVEL_PORT:-5173}"
+PORT="${MININOVEL_PORT:-9513}"
 DATA_DIR="${MININOVEL_DATA_DIR:-$ROOT/.data}"
 COMPOSE_PROJECT="${MININOVEL_COMPOSE_PROJECT:-mininovel}"
 
@@ -15,7 +15,7 @@ usage() {
     'local:  install | run | start | stop | restart | status | logs' \
     'docker: build | start | stop | restart | status | logs' \
     '' \
-    'Default URL: http://127.0.0.1:5173' \
+    'Default URL: http://127.0.0.1:9513' \
     'MININOVEL_PORT changes the host port.' \
     'MININOVEL_DATA_DIR changes the local data directory (use an absolute path).' \
     'Docker uses its own persistent named volume; stop never deletes data.' \
