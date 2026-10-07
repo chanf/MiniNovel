@@ -1,0 +1,1 @@
+"""MiniNovel local application."""

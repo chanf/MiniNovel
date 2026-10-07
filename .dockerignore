@@ -1,0 +1,16 @@
+# Only runtime sources and locked dependencies enter the build context.
+**
+!Dockerfile
+!pyproject.toml
+!uv.lock
+!.python-version
+!run.py
+!index.html
+!app.js
+!styles.css
+!server/
+!server/**
+!assets/
+!assets/**
+server/**/__pycache__/
+server/**/*.pyc
